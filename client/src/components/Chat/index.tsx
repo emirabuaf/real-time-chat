@@ -71,7 +71,7 @@ const Chat = ({ selectedUser, currentUser }: ChatProps) => {
     };
 
     ws.current.onclose = () => {
-      console.log('WebSocket closd');
+      console.log('WebSocket closed');
       setReadyState(WebSocket.CLOSED);
     };
 
