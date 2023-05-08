@@ -97,7 +97,7 @@ const Chat = ({ selectedUser, currentUser }: ChatProps) => {
   };
 
 
-  console.log(messages)
+  console.log(currentUser?._id)
 
 
   return (
