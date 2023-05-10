@@ -15,15 +15,11 @@ interface ChatProps {
 interface Message {
   _id: string;
   text: string;
-  sender: {
-    _id: string;
-    username: string;
-  };
-  receiver: {
-    _id: string;
-    username: string;
-  };
+  sender: string;
+  senderId: string;
+  receiverId: string;
   createdAt: string;
+  roomId: string;
 }
 
 const useStyles = makeStyles({
@@ -67,7 +63,14 @@ const Chat = ({ selectedUser, currentUser }: ChatProps) => {
 
     ws.current.onmessage = (event: any) => {
       const message = JSON.parse(event.data);
-      setMessages((prevMessages) => [...prevMessages, message]);
+      if (message.type === 'message') {
+        const { roomId } = message;
+        const isCurrentChat = roomId === getRoomId(currentUser!._id, selectedUser!._id);
+
+        if (isCurrentChat) {
+          setMessages((prevMessages) => [...prevMessages, message]);
+        }
+      }
     };
 
     ws.current.onclose = () => {
@@ -80,36 +83,44 @@ const Chat = ({ selectedUser, currentUser }: ChatProps) => {
         ws.current.close();
       }
     };
-  }, []);
+  }, [currentUser, selectedUser]);
+
+  const getRoomId = (userId1: string, userId2: string) => {
+    return [userId1, userId2].sort().join(':');
+  };
 
   const handleSendMessage = (e: any) => {
     e.preventDefault();
     if (readyState === WebSocket.OPEN) {
+      const roomId = getRoomId(currentUser!._id, selectedUser!._id);
       const message = {
         type: 'message',
         text: messageInput,
         senderId: currentUser?._id,
         receiverId: selectedUser?._id,
+        roomId: roomId,
       };
+
       ws.current?.send(JSON.stringify(message));
       setMessageInput('');
     }
   };
 
-
-  console.log(currentUser?._id)
-
-
   return (
     <Box className={classes.root} sx={{ border: '1px dashed grey', display: 'flex', flexDirection: 'column' }}>
       <Typography variant="h6">{selectedUser?.email}</Typography>
       <Box className={classes.messageContainer}>
-        {messages.map((message) => (
-          <Box key={message._id} className={classes.message}>
-            <Typography variant="caption" sx={{ fontWeight: 'bold' }}>{message.sender.username}</Typography>
-            <Typography variant="body1">{message.text}</Typography>
-          </Box>
-        ))}
+        {messages
+          .filter((message) => {
+            const roomId = getRoomId(currentUser!._id, selectedUser!._id);
+            return message.roomId === roomId;
+          })
+          .map((message, index) => (
+            <Box key={index} className={classes.message}>
+              <Typography variant="caption" sx={{ fontWeight: 'bold' }}></Typography>
+              <Typography variant="body1">{message.text}</Typography>
+            </Box>
+          ))}
       </Box>
       <form onSubmit={handleSendMessage}>
         <TextField

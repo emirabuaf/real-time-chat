@@ -37,14 +37,18 @@ exports.init = (server) => {
           const roomId = [senderId, receiverId].sort().join(':');
           activeConnections.set(ws, decodedToken.id);
 
-          const otherWs = [...activeConnections.entries()]
-            .find(([ws, userId]) => ws !== ws && userId === receiverId)?.[0];
 
-          if (otherWs) {
-            otherWs.send(JSON.stringify({
-              ...data,
-              sender: decodedToken.id,
-            }));
+          // If the sender is not the same as the receiver, send the message to the receiver as well
+          if (senderId !== receiverId) {
+            const receiverWs = [...activeConnections.entries()]
+              .find(([otherWs, userId]) => otherWs !== ws && userId === receiverId)?.[0];
+
+            if (receiverWs) {
+              receiverWs.send(JSON.stringify({
+                ...data,
+                sender: decodedToken.id,
+              }));
+            }
           }
 
           const roomName = [senderId, receiverId].sort().join('_');
@@ -54,6 +58,12 @@ exports.init = (server) => {
           const messageCollection = mongoose.connection.collection(roomName);
           await messageCollection.insertOne(newMessage);
           console.log('New message saved to database');
+
+          // Send the message back to the sender
+          ws.send(JSON.stringify({
+            ...data,
+            sender: decodedToken.id,
+          }));
         }
       });
 
